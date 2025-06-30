@@ -1,10 +1,10 @@
 import OSLog
 import Foundation
 
-public final class BeaverLogger: LogSink, @unchecked Sendable {
+public final class BeaverLogger: LogSink, Sendable {
     private let logLevel: LogLevel
     private let logSinks: [LogSink]
-    private var loggers = [String: Logger]()
+    nonisolated(unsafe) private var loggers = [String: Logger]()
     private let loggersLock = NSLock()
     private let queue = DispatchQueue(label: "com.beaver.logging", qos: .utility)
     
@@ -38,7 +38,8 @@ public final class BeaverLogger: LogSink, @unchecked Sendable {
         // Add log level filtering - only log if message level is >= configured level
         guard logLevel.level >= self.logLevel.level else { return }
         
-        queue.async {
+        queue.async { [weak self] in
+            guard let self = self else { return }
             // Write to custom log sinks
             self.logSinks.forEach { logSink in
                 logSink.writeLog(logLevel: logLevel, logTag: logTag, message: message, file: file, line: line)
@@ -73,30 +74,5 @@ public final class BeaverLogger: LogSink, @unchecked Sendable {
     private func formattedPrefix(logLevel: LogLevel, file: String, line: Int) -> String {
         let filename = URL(fileURLWithPath: file).lastPathComponent
         return "[\(logLevel.name)] \(filename):\(line)"
-    }
-}
-
-// MARK: - Builder Pattern
-
-public struct BeaverBuilder {
-    private var logLevel: LogLevel = .debug
-    private var logSinks: [LogSink] = []
-    
-    public init() {}
-    
-    public func setLogLevel(_ logLevel: LogLevel) -> BeaverBuilder {
-        var builder = self
-        builder.logLevel = logLevel
-        return builder
-    }
-    
-    public func addLogSink(_ logSink: LogSink) -> BeaverBuilder {
-        var builder = self
-        builder.logSinks.append(logSink)
-        return builder
-    }
-    
-    public func build() -> BeaverLogger {
-        return BeaverLogger(logLevel: logLevel, logSinks: logSinks)
     }
 }
