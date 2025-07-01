@@ -26,9 +26,9 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		667096ED2E1166A700CFB9B8 /* Beaver */ = {
+		667096ED2E1166A700CFB9B8 /* Source */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Beaver;
+			path = Source;
 			sourceTree = "<group>";
 		};
 		667096F92E1166A700CFB9B8 /* BeaverTests */ = {
@@ -60,7 +60,7 @@
 		667096E12E1166A700CFB9B8 = {
 			isa = PBXGroup;
 			children = (
-				667096ED2E1166A700CFB9B8 /* Beaver */,
+				667096ED2E1166A700CFB9B8 /* Source */,
 				667096F92E1166A700CFB9B8 /* BeaverTests */,
 				667096EC2E1166A700CFB9B8 /* Products */,
 			);
@@ -93,17 +93,17 @@
 			buildConfigurationList = 667096FE2E1166A700CFB9B8 /* Build configuration list for PBXNativeTarget "Beaver" */;
 			buildPhases = (
 				667096E62E1166A700CFB9B8 /* Headers */,
-				6DBE56ED1D4284DE091F3C56 /* SwiftLint */,
 				667096E72E1166A700CFB9B8 /* Sources */,
 				667096E82E1166A700CFB9B8 /* Frameworks */,
 				667096E92E1166A700CFB9B8 /* Resources */,
+				6DBE56ED1D4284DE091F3C56 /* SwiftLint */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				667096ED2E1166A700CFB9B8 /* Beaver */,
+				667096ED2E1166A700CFB9B8 /* Source */,
 			);
 			name = Beaver;
 			packageProductDependencies = (
@@ -208,7 +208,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# SwiftLint Build Phase\\nset -e\\n\\n# Check if SwiftLint is installed\\nif ! command -v swiftlint >/dev/null 2>&1; then\\n    echo \\\"warning: SwiftLint not installed. Install with: brew install swiftlint\\\"\\n    exit 0\\nfi\\n\\n# Change to source root directory\\ncd \\\"\\${SRCROOT:-\\$(pwd)}\\\"\\n\\n# Run SwiftLint with visible output\\necho \\\"Running SwiftLint...\\\"\\nswiftlint lint || true\\n\\necho \\\"SwiftLint check completed\\\"\\n\n";
+			shellScript = "if which swiftlint >/dev/null; then\n  #swiftlint --config ../.swiftlint.yml\n  echo \"Toto\"\n  swiftlint --config ../.swiftlint.yml\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
