@@ -33,7 +33,7 @@ import Foundation
  * ```swift
  * struct FileLogSink: LogSink {
  *     private let fileURL: URL
- *     
+ *
  *     func writeLog(logLevel: LogLevel, logTag: any LogTag, message: String, file: String, line: Int) {
  *         let timestamp = ISO8601DateFormatter().string(from: Date())
  *         let logEntry = "[\(timestamp)] [\(logLevel.name)] \(message)\n"
@@ -46,7 +46,7 @@ import Foundation
  * ```swift
  * struct NetworkLogSink: LogSink {
  *     private let endpoint: URL
- *     
+ *
  *     func writeLog(logLevel: LogLevel, logTag: any LogTag, message: String, file: String, line: Int) {
  *         let payload = [
  *             "level": logLevel.name,
@@ -129,7 +129,7 @@ public protocol LogSink: Sendable {
      *     let timestamp = Date()
      *     let filename = URL(fileURLWithPath: file).lastPathComponent
      *     let formattedMessage = "[\(timestamp)] [\(logLevel.name)] [\(logTag.name)] \(filename):\(line) - \(message)"
-     *     
+     *
      *     // Output to your destination
      *     outputToDestination(formattedMessage)
      * }

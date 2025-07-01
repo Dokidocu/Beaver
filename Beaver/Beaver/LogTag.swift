@@ -44,7 +44,7 @@ import Foundation
  * ```swift
  * struct APITag: LogTag {
  *     let endpoint: String
- *     
+ *
  *     var name: String { "API-\(endpoint)" }
  *     var prefix: String { "[🌐 \(name)] " }  // Custom emoji prefix
  * }

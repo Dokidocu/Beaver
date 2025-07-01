@@ -70,7 +70,6 @@ import Foundation
  * - SeeAlso: `BeaverLogger`, `LogSink`, `LogLevel`
  */
 public struct BeaverLoggerBuilder {
-    
     // MARK: - Private Properties
     
     /**
@@ -294,6 +293,6 @@ public struct BeaverLoggerBuilder {
      * - SeeAlso: `BeaverLogger` for usage documentation of the built logger
      */
     public func build() -> BeaverLogger {
-        return BeaverLogger(logLevel: logLevel, logSinks: logSinks)
+        BeaverLogger(logLevel: logLevel, logSinks: logSinks)
     }
 }

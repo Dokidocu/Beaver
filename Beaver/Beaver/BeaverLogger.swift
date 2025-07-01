@@ -86,7 +86,7 @@ public final class BeaverLogger: LogSink, Sendable {
      *
      * - Note: This initializer is internal and should be called through BeaverLoggerBuilder
      */
-    init(logLevel: LogLevel, logSinks: [LogSink], loggers: [String : Logger] = [String: Logger]()) {
+    init(logLevel: LogLevel, logSinks: [LogSink], loggers: [String: Logger] = [String: Logger]()) {
         self.logLevel = logLevel
         self.logSinks = logSinks
         self.loggers = loggers

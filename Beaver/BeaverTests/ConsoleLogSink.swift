@@ -9,7 +9,6 @@ import Foundation
 import Beaver
 
 public struct ConsoleLogSink: LogSink {
-
     public init() {}
 
     public func writeLog(logLevel: LogLevel, logTag: any LogTag, message: String, file: String, line: Int) {

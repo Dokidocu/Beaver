@@ -78,7 +78,7 @@ public enum LogLevel: Int, CaseIterable, Sendable {
      * - Returns: The integer value of the log level (0-3)
      */
     public var level: Int {
-        return rawValue
+        rawValue
     }
     
     /**

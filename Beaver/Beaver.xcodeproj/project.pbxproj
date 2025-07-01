@@ -93,6 +93,7 @@
 			buildConfigurationList = 667096FE2E1166A700CFB9B8 /* Build configuration list for PBXNativeTarget "Beaver" */;
 			buildPhases = (
 				667096E62E1166A700CFB9B8 /* Headers */,
+				6DBE56ED1D4284DE091F3C56 /* SwiftLint */,
 				667096E72E1166A700CFB9B8 /* Sources */,
 				667096E82E1166A700CFB9B8 /* Frameworks */,
 				667096E92E1166A700CFB9B8 /* Resources */,
@@ -188,6 +189,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		6DBE56ED1D4284DE091F3C56 /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# SwiftLint Build Phase\\nset -e\\n\\n# Check if SwiftLint is installed\\nif ! command -v swiftlint >/dev/null 2>&1; then\\n    echo \\\"warning: SwiftLint not installed. Install with: brew install swiftlint\\\"\\n    exit 0\\nfi\\n\\n# Change to source root directory\\ncd \\\"\\${SRCROOT:-\\$(pwd)}\\\"\\n\\n# Run SwiftLint with visible output\\necho \\\"Running SwiftLint...\\\"\\nswiftlint lint || true\\n\\necho \\\"SwiftLint check completed\\\"\\n\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		667096E72E1166A700CFB9B8 /* Sources */ = {
