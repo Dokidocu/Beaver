@@ -4,18 +4,18 @@
 
 # Include all Swift files in the project
 included:
-  - Beaver/
+  - Source/
   - BeaverTests/
-  - Examples/
 
 # Exclude generated files and dependencies
-excluded:
-  - Beaver.xcodeproj/
-  - .build/
-  - Pods/
-  - Carthage/
-  - Package.resolved
-  - .swiftpm/
+#excluded:
+#    - Beaver/
+#  - Beaver.xcodeproj/
+#  - .build/
+#  - Pods/
+#  - Carthage/
+#  - Package.resolved
+#  - .swiftpm/
 
 # Analyzer rules (require building the project)
 analyzer_rules:
