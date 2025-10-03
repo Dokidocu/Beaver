@@ -13,24 +13,22 @@ let package = Package(
     products: [
         .library(
             name: "Beaver",
-            targets: ["Beaver"]),
+            targets: ["Source"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/realm/SwiftLint.git", from: "0.54.0")
     ],
     targets: [
         .target(
             name: "Beaver",
+            exclude: ["Beaver.docc"],
             dependencies: [],
             plugins: [
-                .plugin(name: "SwiftLintPlugin", package: "SwiftLint")
             ]
         ),
         .testTarget(
             name: "BeaverTests",
-            dependencies: ["Beaver"],
+            dependencies: ["Source"],
             plugins: [
-                .plugin(name: "SwiftLintPlugin", package: "SwiftLint")
             ]
         ),
     ]
