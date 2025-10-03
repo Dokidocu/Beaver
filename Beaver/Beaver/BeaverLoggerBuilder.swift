@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Builder Pattern
+
 /**
  * A builder class for constructing `BeaverLogger` instances with customizable configuration.
  *
