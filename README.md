@@ -1,21 +1,22 @@
 # Beaver 🦫
 
-A modern, flexible Swift logging framework that seamlessly integrates with Apple's unified logging system.
+A lightweight, Swift 6-compatible logging framework that integrates with Apple's unified logging system (OSLog) and supports custom output sinks.
 
 ## Features
 
-- 🚀 **High Performance**: Lazy evaluation with `@autoclosure` parameters
-- 🔒 **Thread Safe**: Concurrent logging operations with proper synchronization
-- 🎯 **Structured Logging**: Organize logs with tags and categories
-- 🍎 **OSLog Integration**: Automatic integration with Apple's unified logging
-- 🔧 **Extensible**: Protocol-based architecture for custom output destinations
-- 📱 **Cross Platform**: iOS 14+, macOS 11+, tvOS 14+, watchOS 7+
+- **Zero boilerplate** — log from any thread, actor, or `@MainActor` context with no `await`
+- **Swift 6 ready** — strict concurrency safe; actor-isolated configuration, `nonisolated` log path
+- **OSLog integration** — bridges to `os.Logger` with proper subsystem/category/level mapping
+- **Structured tags** — categorise logs by feature area; maps directly to OSLog subsystem and category
+- **Rich message interpolation** — format doubles, arrays, dictionaries, Codable types, and JSON inline
+- **Extensible** — implement `LogSink` to add any output destination (file, network, analytics, etc.)
+- **Cross-platform** — iOS 14+, macOS 11+, tvOS 14+, watchOS 7+
 
 ## Installation
 
 ### Swift Package Manager
 
-Add to your `Package.swift`:
+Add Beaver to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -23,340 +24,221 @@ dependencies: [
 ]
 ```
 
-Or add via Xcode: File → Add Package Dependencies
+Or add via Xcode → File → Add Package Dependencies.
 
-## Usage
-
-### Basic Logging
+## Quick Start
 
 ```swift
 import Beaver
 
-// Create a logger with default configuration
-let logger = BeaverLoggerBuilder().build()
+// 1. Configure once at startup (the only async call)
+await Log.configure(.init(minimumLevel: .info, sinks: [OSLogSink()]))
 
-// Log at different levels
-logger.debug("Detailed debugging information")
-logger.info("General informational messages")
-logger.warning("Warning about potential issues")
-logger.error("Error events that need attention")
+// 2. Log from anywhere — no await, works on any thread
+Log.info("App launched", tag: LogTags.lifecycle)
+Log.debug("User tapped login", tag: LogTags.ui)
+Log.warning("Cache miss for key \(key)", tag: LogTags.performance)
+Log.error("Request failed: \(error)", tag: LogTags.network)
 ```
 
-### Custom Configuration
+## Configuration
+
+`Log.Configuration` accepts a minimum log level and a list of sinks. Messages below the minimum level are dropped before reaching any sink.
 
 ```swift
-import Beaver
+// Production: only warnings and above, routed to OSLog
+await Log.configure(.init(
+    minimumLevel: .warning,
+    sinks: [OSLogSink()]
+))
 
-// Configure logger with custom settings
-let logger = BeaverLoggerBuilder()
-    .setLogLevel(.debug)
-    .addLogSink(ConsoleLogSink())
-    .addLogSink(FileLogSink(fileURL: logFileURL))
-    .build()
-
-logger.info("Application started with custom configuration")
+// Development: all levels, multiple destinations
+await Log.configure(.init(
+    minimumLevel: .debug,
+    sinks: [OSLogSink(), MyFileSink()]
+))
 ```
 
-### Tagged Logging
+The default configuration (before `configure` is called) logs everything at `.debug` level to `OSLogSink`.
 
-Organize your logs with tags for better categorization:
+## Logging API
+
+### Static convenience (recommended)
 
 ```swift
-import Beaver
-
-// Using built-in tags
-let networkTag = NetworkTag()
-let logger = BeaverLoggerBuilder().build()
-
-logger.info(tag: networkTag, message: "API request initiated")
-logger.error(tag: networkTag, message: "Network request failed")
-
-// Custom tags
-struct PaymentTag: LogTag {
-    let subsystem = Bundle.main.bundleIdentifier ?? "com.yourapp"
-    let category = "Payment"
-}
-
-let paymentTag = PaymentTag()
-logger.info(tag: paymentTag, message: "Payment processed successfully")
+Log.debug("…", tag: LogTags.general)
+Log.info("…", tag: LogTags.network)
+Log.warning("…", tag: LogTags.performance)
+Log.error("…", tag: LogTags.auth)
 ```
 
-## Components
+The `tag` parameter defaults to `LogTags.general` when omitted.
 
-### BeaverLogger
-
-The core logging engine that handles message processing and distribution to multiple output destinations.
-
-**Key Features:**
-- Thread-safe operations using dispatch queues and locks
-- Automatic OSLog integration with proper log type mapping
-- Performance optimization with lazy message evaluation
-- Support for multiple simultaneous log sinks
-
-### BeaverLoggerBuilder
-
-Builder pattern for configuring logger instances with a fluent API.
+### Explicit level
 
 ```swift
-let logger = BeaverLoggerBuilder()
-    .setLogLevel(.warning)  // Only log warnings and errors
-    .addLogSink(sink1)      // Add custom sink
-    .addLogSink(sink2)      // Add another sink
-    .build()                // Create configured logger
+Log.shared.log(.info, tag: LogTags.lifecycle, "Scene became active")
 ```
 
-### Log Levels
+### From inside an actor or `@MainActor` type
 
-Four standard logging levels with automatic OSLog mapping:
-
-- **Debug** (`LogLevel.debug`): Detailed information for debugging → `OSLogType.debug`
-- **Info** (`LogLevel.info`): General informational messages → `OSLogType.info`
-- **Warning** (`LogLevel.warning`): Warning messages → `OSLogType.default`
-- **Error** (`LogLevel.error`): Error events → `OSLogType.error`
-
-Messages below the configured level are automatically filtered out for performance.
-
-### Log Tags
-
-Tags provide structured categorization using subsystem and category:
+No special handling is required. All log methods are `nonisolated` and synchronous:
 
 ```swift
-public protocol LogTag {
-    var subsystem: String { get }  // Usually your bundle identifier
-    var category: String { get }   // Specific feature or module
-}
-```
-
-**Built-in Tags:**
-- `GeneralTag` - General application logs
-- `NetworkTag` - Network operations
-- `DatabaseTag` - Database operations  
-- `UITag` - User interface events
-
-### Log Sinks
-
-Output destinations that implement the `LogSink` protocol:
-
-```swift
-public protocol LogSink {
-    func write(_ message: String, level: LogLevel, tag: LogTag?)
-}
-```
-
-**Built-in Sinks:**
-- `ConsoleLogSink` - Standard console output
-- `FileLogSink` - File-based logging with proper error handling
-
-## Creating Custom Components
-
-### Custom Log Sinks
-
-Create custom output destinations for logs:
-
-```swift
-struct NetworkLogSink: LogSink {
-    private let endpoint: URL
-    
-    func write(_ message: String, level: LogLevel, tag: LogTag?) {
-        // Send logs to your analytics service
-        let logData = [
-            "message": message,
-            "level": level.rawValue,
-            "subsystem": tag?.subsystem,
-            "category": tag?.category,
-            "timestamp": ISO8601DateFormatter().string(from: Date())
-        ]
-        
-        sendToServer(logData, to: endpoint)
-    }
-    
-    private func sendToServer(_ data: [String: Any?], to url: URL) {
-        // Implementation for network logging
+@MainActor
+final class HomeViewModel: ObservableObject {
+    func loadData() {
+        Log.info("Loading data…", tag: LogTags.network)
+        // …
     }
 }
-
-// Use in configuration
-let logger = BeaverLoggerBuilder()
-    .addLogSink(NetworkLogSink(endpoint: URL(string: "https://api.example.com/logs")!))
-    .build()
 ```
 
-### Custom Log Tags
+## Log Levels
 
-Create domain-specific tags for better log organization:
+| Level | OSLog type | Typical use |
+|-------|-----------|-------------|
+| `.debug` | `debug` | Verbose development detail |
+| `.info` | `info` | General application flow |
+| `.warning` | `fault` | Unexpected but recoverable situations |
+| `.error` | `error` | Failures that affect functionality |
+
+## Log Tags
+
+Tags identify the feature area that emitted a log. They map to the `subsystem` and `category` fields of `os.Logger`, making logs easily filterable in Console.app and Instruments.
+
+### Built-in tags
 
 ```swift
-struct AuthenticationTag: LogTag {
-    let subsystem = Bundle.main.bundleIdentifier ?? "com.yourapp"
-    let category = "Authentication"
+LogTags.general       // General application logs
+LogTags.lifecycle     // OS-driven app/scene lifecycle
+LogTags.performance   // Timing and performance metrics
+LogTags.network       // Transport-level networking
+LogTags.api           // API and backend contract
+LogTags.auth          // Authentication and session state
+LogTags.oauth         // OAuth token lifecycle
+LogTags.ui            // UI flow and navigation
+LogTags.accessibility // Accessibility behaviour
+```
+
+### Custom tags
+
+```swift
+extension LogTags {
+    static let payments = LogTag(
+        subsystem: "com.example.app.payments",
+        prefix: "💳",
+        name: "Payments"
+    )
 }
 
-struct DatabaseTag: LogTag {
-    let subsystem = Bundle.main.bundleIdentifier ?? "com.yourapp"  
-    let category = "Database"
-}
-
-// Usage
-let authTag = AuthenticationTag()
-let dbTag = DatabaseTag()
-
-logger.info(tag: authTag, message: "User login attempt")
-logger.error(tag: dbTag, message: "Database connection failed")
+Log.info("Payment authorised", tag: LogTags.payments)
 ```
 
-## OSLog Integration
+## Message Interpolation
 
-Beaver automatically integrates with Apple's unified logging system. Your logs will appear in:
+`LogMessage` uses `ExpressibleByStringInterpolation` so messages are constructed lazily — if the log level is filtered out, the string is never built.
 
-- **Xcode Console**: During development and debugging
-- **Console.app**: On macOS for system-wide log viewing
-- **Instruments**: For performance analysis and debugging
-
-The integration preserves your tag information:
-- `LogTag.subsystem` → OSLog subsystem
-- `LogTag.category` → OSLog category
-- `LogLevel` → Appropriate `OSLogType`
-
-## Performance Considerations
-
-Beaver is designed for high performance in production environments:
-
-### Lazy Evaluation
 ```swift
-// Message is only constructed if debug level is enabled
-logger.debug("Expensive operation result: \(performExpensiveCalculation())")
+let value = 3.14159
+Log.debug("Pi ≈ \(value, precision: 2)")           // "Pi ≈ 3.14"
+Log.debug("Pi ≈ \(value, precision: 4)")           // "Pi ≈ 3.1416"
+
+let ids = [1, 2, 3]
+Log.debug("IDs: \(ids)")                           // "IDs: [1, 2, 3]"
+
+let meta: [String: Any] = ["attempt": 1, "timeout": 30]
+Log.debug("Meta: \(meta)")                         // "Meta: {attempt: 1, timeout: 30}"
+
+struct Response: Codable { let status: Int; let body: String }
+let response = Response(status: 200, body: "OK")
+Log.debug("Response:\n\(json: response)")          // pretty-printed JSON
 ```
 
-### Async Processing
-All log operations are performed asynchronously to avoid blocking your main application logic.
+## Custom Sinks
 
-### Early Filtering
-Messages below the configured log level are filtered out before any processing occurs.
-
-### Thread Safety
-All operations are thread-safe and can be called from any queue without additional synchronization.
-
-## Advanced Usage
-
-### Multiple Loggers
-Create specialized loggers for different parts of your application:
+Implement `LogSink` to route logs to any destination:
 
 ```swift
-// Network logger with file output
-let networkLogger = BeaverLoggerBuilder()
-    .setLogLevel(.info)
-    .addLogSink(FileLogSink(fileURL: networkLogURL))
-    .build()
+import Beaver
+import Foundation
 
-// UI logger with console output  
-let uiLogger = BeaverLoggerBuilder()
-    .setLogLevel(.debug)
-    .addLogSink(ConsoleLogSink())
-    .build()
-
-// Use appropriate logger for context
-networkLogger.info(tag: NetworkTag(), message: "API call completed")
-uiLogger.debug(tag: UITag(), message: "Button tapped")
-```
-
-### Conditional Logging
-Leverage Swift's lazy evaluation for expensive log messages:
-
-```swift
-// Only executes expensive operation if warning level is enabled
-logger.warning("Performance metrics: \(generateDetailedMetrics())")
-```
-
-## Best Practices
-
-### 1. Use Appropriate Log Levels
-- **Debug**: Verbose information useful during development
-- **Info**: General application flow and important events
-- **Warning**: Potentially harmful situations that don't stop execution
-- **Error**: Error events that might affect functionality
-
-### 2. Create Meaningful Tags
-Organize logs by feature or subsystem for easier filtering and analysis:
-
-```swift
-struct FeatureXTag: LogTag {
-    let subsystem = "com.yourapp"
-    let category = "FeatureX"
+struct PrintSink: LogSink {
+    func writeLog(
+        logLevel: LogLevel,
+        logTag: LogTag,
+        message: LogMessage,
+        context: LogContext
+    ) {
+        let file = String(describing: context.file).split(separator: "/").last ?? "?"
+        print("[\(logLevel)] [\(logTag.identifier)] \(file):\(context.line) — \(message.value)")
+    }
 }
 ```
 
-### 3. Use Lazy Evaluation
-Take advantage of `@autoclosure` for expensive log message construction:
+Use it alongside the default OSLog sink:
 
 ```swift
-// Good: Only constructs message if needed
-logger.debug("User data: \(user.debugDescription)")
-
-// Less efficient: Always constructs message
-let message = "User data: \(user.debugDescription)"
-logger.debug(message)
+await Log.configure(.init(
+    minimumLevel: .debug,
+    sinks: [OSLogSink(), PrintSink()]
+))
 ```
 
-### 4. Configure Once
-Set up your logger configuration early in your application lifecycle:
+### Async sinks (fire-and-forget)
+
+If your sink performs I/O, dispatch work internally so `writeLog` returns immediately:
 
 ```swift
-// In your App delegate or main app file
-let logger = BeaverLoggerBuilder()
-    .setLogLevel(.info)
-    .addLogSink(ConsoleLogSink())
-    .addLogSink(FileLogSink(fileURL: logFileURL))
-    .build()
+final class RemoteLogSink: LogSink, @unchecked Sendable {
+    private let queue = DispatchQueue(label: "remote-log-sink", qos: .utility)
+
+    func writeLog(
+        logLevel: LogLevel,
+        logTag: LogTag,
+        message: LogMessage,
+        context: LogContext
+    ) {
+        let payload = message.value   // capture value before async hop
+        queue.async { self.send(payload) }
+    }
+
+    private func send(_ payload: String) { /* network call */ }
+}
 ```
+
+## Design
+
+```
+Log (actor)
+    └── LoggerState (NSLock-protected)
+            └── LoggerFacade (level filter)
+                    └── LogSinks (multiplexer)
+                            ├── OSLogSink
+                            └── … custom sinks
+```
+
+- **`Log`** — actor; holds `LoggerState` as a `nonisolated let`; all log methods are `nonisolated` so they never suspend.
+- **`LoggerState`** — `@unchecked Sendable` class; guards the active `LoggerFacade` with an `NSLock`; enables lock-free reads after a single load.
+- **`LoggerFacade`** — immutable filter; drops messages below the configured minimum level.
+- **`LogSinks`** — fans a message out to all configured sinks.
+- **`OSLogSink`** — bridges to `os.Logger`; caches `Logger` instances per subsystem/category.
 
 ## Requirements
 
-- **iOS**: 14.0+
-- **macOS**: 11.0+
-- **tvOS**: 14.0+
-- **watchOS**: 7.0+
-- **Xcode**: 12.0+
-- **Swift**: 5.5+
-
-## Architecture
-
-Beaver follows a protocol-oriented architecture that emphasizes:
-
-- **Separation of Concerns**: Clear boundaries between logging, formatting, and output
-- **Extensibility**: Easy to add new sinks, tags, and behaviors
-- **Performance**: Optimized for production use with minimal overhead
-- **Apple Integration**: Seamless integration with platform logging systems
-
-## Thread Safety
-
-All Beaver components are designed to be thread-safe:
-
-- **BeaverLogger**: Uses internal synchronization for concurrent access
-- **Log Sinks**: Called from background queues to avoid blocking
-- **Configuration**: Builder pattern ensures safe setup before use
-
-## Error Handling
-
-Beaver handles errors gracefully:
-
-- **Sink Failures**: Individual sink failures don't affect other sinks
-- **Invalid Configuration**: Builder pattern validates configuration at build time
-- **Resource Issues**: File sinks handle disk space and permission issues
-
-## Contributing
-
-Beaver welcomes contributions! Areas where you can help:
-
-- Additional built-in log sinks (database, network, etc.)
-- Performance improvements
-- Documentation enhancements
-- Platform-specific optimizations
-- Additional built-in tags for common use cases
+| Platform | Minimum |
+|----------|---------|
+| iOS | 14.0 |
+| macOS | 11.0 |
+| tvOS | 14.0 |
+| watchOS | 7.0 |
+| Swift | 5.9 |
+| Xcode | 15.0 |
 
 ## License
 
-[Add your license information here]
+See [LICENSE](LICENSE).
 
 ---
 
-**Beaver** 🦫 - *Building better logs, one message at a time.*
+**Beaver** 🦫 — *Building better logs, one message at a time.*

@@ -1,4 +1,4 @@
-final class LoggerFacade: LogSink {
+final class LoggerFacade: LogSink, Sendable {
     private let sink: any LogSink
     private let minimumLevel: LogLevel
 

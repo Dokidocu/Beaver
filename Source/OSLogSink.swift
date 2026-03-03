@@ -13,7 +13,7 @@ import OSLog
 ///
 /// - Important:
 ///   `OSLogSink` does not perform filtering or configuration logic.
-///   Log-level filtering and sink composition are handled by higher-level components such as `BeaverLogger` and `LoggerFacade`.
+///   Log-level filtering and sink composition are handled by higher-level components such as ``Log`` and `LoggerFacade`.
 ///
 /// - Note:
 ///   Instances of `OSLogSink` are cheap to create and safe to reuse.
