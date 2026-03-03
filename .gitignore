@@ -63,3 +63,6 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 .DS_Store
+
+# GitHub staging directory (populated by scripts/publish-github.sh, not tracked in Bitbucket)
+Beaver-github/

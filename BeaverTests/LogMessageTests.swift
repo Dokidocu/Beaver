@@ -1,10 +1,3 @@
-//
-//  LogMessageTests.swift
-//  BeaverTests
-//
-//  Created by Henri La on 07.02.2026.
-//
-
 import XCTest
 import Foundation
 import Beaver

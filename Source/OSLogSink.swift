@@ -19,6 +19,7 @@ import OSLog
 ///   Instances of `OSLogSink` are cheap to create and safe to reuse.
 public struct OSLogSink: LogSink {
     private let formatter = OSLogFormatter()
+
     /// Creates a new OSLog sink.
     ///
     /// The sink is stateless and does not require any configuration.
@@ -42,11 +43,8 @@ public struct OSLogSink: LogSink {
         context: LogContext
     ) {
         let output = formatter.format(level: logLevel, tag: logTag, message: message, context: context)
-        let logger = Logger(
-            subsystem: output.subsystem,
-            category: output.category
-        )
-        
+        let logger = LoggerCache.logger(subsystem: output.subsystem, category: output.category)
+
         switch logLevel {
         case .debug:
             logger.debug("\(output.message, privacy: .public)")
@@ -60,42 +58,57 @@ public struct OSLogSink: LogSink {
     }
 }
 
+// MARK: - Logger cache
+
+/// Caches `os.Logger` instances keyed by subsystem + category.
+///
+/// `os.Logger` should be created once per subsystem/category pair and reused.
+/// This cache avoids repeated allocations on hot logging paths.
+private enum LoggerCache {
+    private static let lock = NSLock()
+    private static var cache: [String: Logger] = [:]
+
+    static func logger(subsystem: String, category: String) -> Logger {
+        let key = "\(subsystem)/\(category)"
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = cache[key] { return cached }
+        let logger = Logger(subsystem: subsystem, category: category)
+        cache[key] = logger
+        return logger
+    }
+}
+
+// MARK: - Formatter
+
 struct OSLogFormatter {
     struct Output {
         let subsystem: String
         let category: String
         let message: String
     }
+
     func format(
         level: LogLevel,
         tag: LogTag,
         message: LogMessage,
         context: LogContext
     ) -> Output {
-        let subsystem = tag.subsystem
-        let category = String(describing: tag.identifier)
-
-        let prefix = formattedPrefix(level: level, tag: tag, context: context)
-        let message = "\(prefix): \(message.value)"
-
+        let prefix = formattedPrefix(level: level, context: context)
         return Output(
-            subsystem: subsystem,
-            category: category,
-            message: message
+            subsystem: tag.subsystem,
+            category: tag.identifier,
+            message: "\(prefix): \(message.value)"
         )
     }
 
-    private func formattedPrefix(
-        level: LogLevel,
-        tag: LogTag,
-        context: LogContext
-    ) -> String {
+    private func formattedPrefix(level: LogLevel, context: LogContext) -> String {
         let filename = fileName(from: context.file)
         return "[\(level.name)] \(filename).\(context.function).\(context.line)"
     }
 
     private func fileName(from file: StaticString) -> String {
-        URL(fileURLWithPath: String(describing: file))
-            .lastPathComponent
+        let str = String(describing: file)
+        return str.split(separator: "/").last.map(String.init) ?? str
     }
 }

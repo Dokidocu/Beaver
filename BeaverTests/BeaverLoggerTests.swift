@@ -1,92 +1,64 @@
 import XCTest
 @testable import Beaver
 
-final class BeaverLoggerTests: XCTestCase {
-    func testConfigureReplacesUnderlyingLoggerWithProvidedSinks() async throws {
+// MARK: - LoggerFacade unit tests (no shared global state)
+
+final class LoggerFacadeTests: XCTestCase {
+    private let tag = LogTag(subsystem: "com.example.app", prefix: "TEST", name: "Test")
+
+    func testWriteLogForwardsToSinkWhenLevelPassesFilter() {
         let sink = TestSink()
-        let config = BeaverLogger.Configuration(
-            minimumLevel: .debug,
-            sinks: [sink]
-        )
+        let facade = LoggerFacade(sink: sink, minimumLevel: .debug)
 
-        await BeaverLogger.shared.configure(config)
-
-        let tag = LogTag(
-            subsystem: "com.example.app",
-            prefix: "TEST",
-            name: "Test"
-        )
-        let message: LogMessage = "Hello"
-
-        await BeaverLogger.shared.log(
-            .info,
-            tag: tag,
-            message
+        facade.writeLog(
+            logLevel: .info,
+            logTag: tag,
+            message: "Hello",
+            context: LogContext(file: "File.swift", function: "fn()", line: 1)
         )
 
         XCTAssertEqual(sink.entries.count, 1)
-        let entry = try XCTUnwrap(sink.entries.first)
-
-        XCTAssertEqual(entry.level, .info)
-        XCTAssertEqual(entry.tag.subsystem, "com.example.app")
-        XCTAssertEqual(String(describing: entry.tag.name), "Test")
-        XCTAssertEqual(entry.message, "Hello")
+        XCTAssertEqual(sink.entries.first?.level, .info)
+        XCTAssertEqual(sink.entries.first?.message, "Hello")
     }
 
-    func testMinimumLevelIsRespected() async throws {
+    func testWriteLogFiltersMessagesBelowMinimumLevel() {
         let sink = TestSink()
-        let config = BeaverLogger.Configuration(
-            minimumLevel: .info,
-            sinks: [sink]
+        let facade = LoggerFacade(sink: sink, minimumLevel: .info)
+
+        facade.writeLog(
+            logLevel: .debug,
+            logTag: tag,
+            message: "Should be filtered",
+            context: LogContext(file: "File.swift", function: "fn()", line: 1)
         )
 
-        await BeaverLogger.shared.configure(config)
+        XCTAssertTrue(sink.entries.isEmpty)
+    }
 
-        let tag = LogTag(
-            subsystem: "com.example.app",
-            prefix: "TEST",
-            name: "Test"
+    func testWriteLogPassesMessageAtMinimumLevel() {
+        let sink = TestSink()
+        let facade = LoggerFacade(sink: sink, minimumLevel: .warning)
+
+        facade.writeLog(
+            logLevel: .warning,
+            logTag: tag,
+            message: "Boundary message",
+            context: LogContext(file: "File.swift", function: "fn()", line: 1)
         )
-
-        let debugMessage: LogMessage = "Debug message"
-        let infoMessage: LogMessage = "Info message"
-
-        // This should be filtered out by the configured minimumLevel
-        await BeaverLogger.shared.log(.debug, tag: tag, debugMessage)
-
-        // This should be logged
-        await BeaverLogger.shared.log(.info, tag: tag, infoMessage)
 
         XCTAssertEqual(sink.entries.count, 1)
-        let entry = try XCTUnwrap(sink.entries.first)
-        XCTAssertEqual(entry.level, .info)
-        XCTAssertEqual(entry.message, "Info message")
     }
 
-    func testContextInformationIsPassedThrough() async throws {
+    func testContextInformationIsPassedThrough() throws {
         let sink = TestSink()
-        let config = BeaverLogger.Configuration(
-            minimumLevel: .debug,
-            sinks: [sink]
-        )
+        let facade = LoggerFacade(sink: sink, minimumLevel: .debug)
 
-        await BeaverLogger.shared.configure(config)
-
-        let tag = LogTag(
-            subsystem: "com.example.app",
-            prefix: "TEST",
-            name: "Test"
-        )
-        let message: LogMessage = "Context test"
-
-        // Use explicit file/function/line so the test is stable if you want:
-        await BeaverLogger.shared.log(
-            .debug,
-            tag: tag,
-            message,
-            file: "File.swift",
-            function: "someFunction()",
-            line: 123
+        facade.writeLog(
+            logLevel: .debug,
+            logTag: tag,
+            message: "Context test",
+            context: LogContext(file: "File.swift", function: "someFunction()", line: 123)
         )
 
         let entry = try XCTUnwrap(sink.entries.first)
@@ -94,43 +66,39 @@ final class BeaverLoggerTests: XCTestCase {
         XCTAssertEqual(String(describing: entry.function), "someFunction()")
         XCTAssertEqual(entry.line, 123)
     }
+
+    func testTagIsPassedThrough() throws {
+        let sink = TestSink()
+        let facade = LoggerFacade(sink: sink, minimumLevel: .debug)
+
+        facade.writeLog(
+            logLevel: .debug,
+            logTag: tag,
+            message: "Tag test",
+            context: LogContext(file: "File.swift", function: "fn()", line: 1)
+        )
+
+        let entry = try XCTUnwrap(sink.entries.first)
+        XCTAssertEqual(entry.tag, tag)
+    }
 }
 
-final class TestSink: @unchecked Sendable, LogSink {
-    struct Entry {
-        let level: LogLevel
-        let tag: LogTag
-        let message: String
-        let file: StaticString
-        let function: StaticString
-        let line: UInt
-    }
+// MARK: - BeaverLogger integration test (uses shared actor)
 
-    private(set) var entriesStorage: [Entry] = []
-    private let lock = NSLock()
-
-    var entries: [Entry] {
-        lock.lock()
-        defer { lock.unlock() }
-        return entriesStorage
-    }
-
-    func writeLog(
-        logLevel: LogLevel,
-        logTag: LogTag,
-        message: LogMessage,
-        context: LogContext
-    ) {
-        let entry = Entry(
-            level: logLevel,
-            tag: logTag,
-            message: message.value,
-            file: context.file,
-            function: context.function,
-            line: context.line
+final class BeaverLoggerIntegrationTests: XCTestCase {
+    func testConfigureReplacesUnderlyingLoggerWithProvidedSinks() async throws {
+        let sink = TestSink()
+        await BeaverLogger.shared.configure(
+            BeaverLogger.Configuration(minimumLevel: .debug, sinks: [sink])
         )
-        lock.lock()
-        entriesStorage.append(entry)
-        lock.unlock()
+
+        let tag = LogTag(subsystem: "com.example.app", prefix: "TEST", name: "Test")
+        await BeaverLogger.shared.log(.info, tag: tag, "Hello")
+
+        XCTAssertEqual(sink.entries.count, 1)
+        let entry = try XCTUnwrap(sink.entries.first)
+        XCTAssertEqual(entry.level, .info)
+        XCTAssertEqual(entry.tag, tag)
+        XCTAssertEqual(entry.message, "Hello")
     }
 }

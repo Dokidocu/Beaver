@@ -1,10 +1,3 @@
-public protocol LoggerProtocol: LogSink {
-    func debug(_ message: LogMessage, tag: LogTag, file: StaticString, function: StaticString, line: UInt)
-    func info(_ message: LogMessage, tag: LogTag, file: StaticString, function: StaticString, line: UInt)
-    func warning(_ message: LogMessage, tag: LogTag, file: StaticString, function: StaticString, line: UInt)
-    func error(_ message: LogMessage, tag: LogTag, file: StaticString, function: StaticString, line: UInt)
-}
-
 /// Central facade for the application's logging system.
 ///
 /// `BeaverLogger` coordinates logging across multiple `LogSink` implementations and provides a single, concurrency-safe entry point
@@ -34,11 +27,11 @@ public actor BeaverLogger {
     /// creating additional instances.
     public static let shared = BeaverLogger()
 
-    /// The underlying logger implementation used to emit log messages.
+    /// The underlying sink used to emit log messages.
     ///
     /// This value is configured via ``configure(_:)`` and typically wraps one or more `LogSink` instances (for example, an `OSLogSink`
     /// plus additional sinks provided by the application).
-    public private(set) var logger: LoggerProtocol = LoggerFacade(
+    public private(set) var logger: any LogSink = LoggerFacade(
         sink: OSLogSink(),
         minimumLevel: .debug
     )

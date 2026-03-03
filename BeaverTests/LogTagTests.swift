@@ -11,7 +11,7 @@ final class LogTagTests: XCTestCase {
             name: "Network"
         )
 
-        XCTAssertEqual(String(describing: tag.subsystem), "com.example.app.network")
+        XCTAssertEqual(tag.subsystem, "com.example.app.network")
         XCTAssertEqual(String(describing: tag.prefix), "NET")
         XCTAssertEqual(String(describing: tag.name), "Network")
     }
@@ -23,7 +23,7 @@ final class LogTagTests: XCTestCase {
             name: "General"
         )
 
-        XCTAssertEqual(String(describing: tag.subsystem), "com.example.app")
+        XCTAssertEqual(tag.subsystem, "com.example.app")
         XCTAssertEqual(String(describing: tag.prefix), "")
         XCTAssertEqual(String(describing: tag.name), "General")
     }
@@ -41,13 +41,10 @@ final class LogTagTests: XCTestCase {
             name: "Auth"
         )
 
-        XCTAssertEqual(String(describing: network.subsystem), String(describing: auth.subsystem))
-        XCTAssertNotEqual(
-            String(describing: network.name),
-            String(describing: auth.name)
-        )
+        XCTAssertEqual(network.subsystem, auth.subsystem)
+        XCTAssertNotEqual(network, auth)
     }
-    
+
     func testIdentifierWithPrefix() {
         let tag = LogTag(
             subsystem: "com.example.app.network",
@@ -55,7 +52,6 @@ final class LogTagTests: XCTestCase {
             name: "Network"
         )
 
-        // Only valid if you implement `identifier` as suggested above.
         XCTAssertEqual(tag.identifier, "NET Network")
     }
 
@@ -69,7 +65,7 @@ final class LogTagTests: XCTestCase {
         XCTAssertEqual(tag.identifier, "General")
     }
 
-    // MARK: - Example: Equatable / Hashable (if you conform later)
+    // MARK: - Equatable / Hashable
 
     func testEqualityWhenAllFieldsMatch() {
         let logA = LogTag(
@@ -84,8 +80,8 @@ final class LogTagTests: XCTestCase {
             name: "Network"
         )
 
-        XCTAssertEqual(String(describing: logA), String(describing: logB))
-        XCTAssertEqual(String(describing: logA).hashValue, String(describing: logB).hashValue)
+        XCTAssertEqual(logA, logB)
+        XCTAssertEqual(logA.hashValue, logB.hashValue)
     }
 
     func testInequalityWhenAnyFieldDiffers() {
@@ -113,8 +109,8 @@ final class LogTagTests: XCTestCase {
             name: "Auth"
         )
 
-        XCTAssertNotEqual(String(describing: base), String(describing: differentSubsystem))
-        XCTAssertNotEqual(String(describing: base), String(describing: differentPrefix))
-        XCTAssertNotEqual(String(describing: base), String(describing: differentName))
+        XCTAssertNotEqual(base, differentSubsystem)
+        XCTAssertNotEqual(base, differentPrefix)
+        XCTAssertNotEqual(base, differentName)
     }
 }

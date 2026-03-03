@@ -4,16 +4,11 @@ import Beaver
 final class LogLevelTests: XCTestCase {
     // MARK: - Priority & Ordering
 
-    func testRawValuesAndPriorityMatch() {
+    func testRawValues() {
         XCTAssertEqual(LogLevel.debug.rawValue, 0)
         XCTAssertEqual(LogLevel.info.rawValue, 1)
         XCTAssertEqual(LogLevel.warning.rawValue, 2)
         XCTAssertEqual(LogLevel.error.rawValue, 3)
-
-        XCTAssertEqual(LogLevel.debug.priority, 0)
-        XCTAssertEqual(LogLevel.info.priority, 1)
-        XCTAssertEqual(LogLevel.warning.priority, 2)
-        XCTAssertEqual(LogLevel.error.priority, 3)
     }
 
     func testSeverityOrdering() {
@@ -23,7 +18,6 @@ final class LogLevelTests: XCTestCase {
     }
 
     func testComparableOrdering() {
-        // Only valid if LogLevel: Comparable
         XCTAssertTrue(LogLevel.debug < .info)
         XCTAssertTrue(LogLevel.info < .warning)
         XCTAssertTrue(LogLevel.warning < .error)

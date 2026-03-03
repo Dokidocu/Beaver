@@ -1,10 +1,3 @@
-//
-//  LogContext.swift
-//  Beaver
-//
-//  Created by Henri La on 07.02.2026.
-//
-
 import Foundation
 
 /// Source-code context associated with a log entry.

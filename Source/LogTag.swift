@@ -11,7 +11,7 @@ import Foundation
 /// - Efficient use in high-frequency logging paths
 ///
 /// A `LogTag` usually represents a feature area or subsystem, such as networking, authentication, or persistence.
-public struct LogTag: Sendable {
+public struct LogTag: Sendable, Equatable, Hashable {
     /// The subsystem associated with this log tag.
     ///
     /// This value is commonly mapped to the `subsystem` parameter of
@@ -71,6 +71,18 @@ public struct LogTag: Sendable {
         self.subsystem = subsystem
         self.prefix = prefix
         self.name = name
+    }
+
+    public static func == (lhs: LogTag, rhs: LogTag) -> Bool {
+        lhs.subsystem == rhs.subsystem
+            && String(describing: lhs.prefix) == String(describing: rhs.prefix)
+            && String(describing: lhs.name) == String(describing: rhs.name)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(subsystem)
+        hasher.combine(String(describing: prefix))
+        hasher.combine(String(describing: name))
     }
 
     /// Combined identifier commonly used in formatted log output.

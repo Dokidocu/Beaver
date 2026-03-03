@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  Beaver
-//
-//  Created by Henri La on 07.02.2026.
-//
-
 import Foundation
 
 public struct LogMessage: Sendable, ExpressibleByStringInterpolation {

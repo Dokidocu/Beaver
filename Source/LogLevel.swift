@@ -24,20 +24,6 @@ public enum LogLevel: Int, CaseIterable, Sendable, CustomStringConvertible, Comp
 
     // MARK: - Public APIs
 
-    /// Numeric representation of the level's severity.
-    ///
-    /// Higher values represent more severe log levels and can be used
-    /// for filtering, e.g.:
-    ///
-    /// ```swift
-    /// if logLevel.priority >= LogLevel.info.priority {
-    ///     // handle log
-    /// }
-    /// ```
-    public var priority: Int {
-        rawValue
-    }
-
     /// Uppercased name of the log level, suitable for formatted output.
     ///
     /// Examples:
@@ -78,13 +64,11 @@ public enum LogLevel: Int, CaseIterable, Sendable, CustomStringConvertible, Comp
     // MARK: - Internal
 
     var osLogType: OSLogType {
-        let result: OSLogType
         switch self {
-        case .debug: result = .debug
-        case .info: result = .info
-        case .warning: result = .default  // Changed from .fault for better mapping
-        case .error: result = .error
+        case .debug: return .debug
+        case .info: return .info
+        case .warning: return .fault
+        case .error: return .error
         }
-        return result
     }
 }

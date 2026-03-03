@@ -13,23 +13,20 @@ let package = Package(
     products: [
         .library(
             name: "Beaver",
-            targets: ["Source"]),
+            targets: ["Beaver"]),
     ],
     dependencies: [
     ],
     targets: [
         .target(
             name: "Beaver",
-            exclude: ["Beaver.docc"],
             dependencies: [],
-            plugins: [
-            ]
+            path: "Source"
         ),
         .testTarget(
             name: "BeaverTests",
-            dependencies: ["Source"],
-            plugins: [
-            ]
+            dependencies: ["Beaver"],
+            path: "BeaverTests"
         ),
     ]
 )
