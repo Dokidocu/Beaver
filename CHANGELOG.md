@@ -5,6 +5,15 @@ All notable changes to Beaver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-03-06
+
+### Fixed
+
+- Removed extraneous blank line after opening brace in `Log.swift` (SwiftLint `vertical_whitespace_opening_braces`).
+- Split test classes into one file each to satisfy SwiftLint `single_test_class` rule (`LoggerFacadeTests.swift`, `LogNonisolatedTests.swift`, `LogIntegrationTests.swift`).
+- Converted `LoggerCache` from a namespace `enum` to a `final class` singleton (`@unchecked Sendable`) to resolve Swift 6 strict-concurrency error on the internal `os.Logger` cache.
+- Added explicit `Sendable` conformance to `Log.Configuration` to satisfy Swift 6 actor-boundary safety when passing a configuration value to `await Log.configure(_:)`.
+
 ## [1.0.0] - 2026-03-03
 
 ### Added

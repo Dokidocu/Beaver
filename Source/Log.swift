@@ -18,7 +18,6 @@
 /// Log.error("Request failed: \(error)", tag: LogTags.network)
 /// ```
 public actor Log {
-
     // MARK: - Shared instance
 
     /// Shared global logger instance.
@@ -186,7 +185,7 @@ public actor Log {
     // MARK: - Configuration
 
     /// Configuration values for ``Log``.
-    public struct Configuration {
+    public struct Configuration: Sendable {
         /// The minimum log level that will be emitted.
         ///
         /// Messages below this level are filtered out before reaching any sink.

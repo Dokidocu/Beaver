@@ -12,11 +12,7 @@ final class OSLogFormatterTests: XCTestCase {
         prefix: StaticString = "NET",
         name: StaticString = "Network"
     ) -> LogTag {
-        LogTag(
-            subsystem: subsystem,
-            prefix: prefix,
-            name: name
-        )
+        LogTag(subsystem: subsystem, prefix: prefix, name: name)
     }
 
     private func makeContext(
@@ -24,69 +20,45 @@ final class OSLogFormatterTests: XCTestCase {
         function: StaticString = "myFunction()",
         line: UInt = 42
     ) -> LogContext {
-        LogContext(
-            file: file,
-            function: function,
-            line: line
-        )
+        LogContext(file: file, function: function, line: line)
     }
 
     // MARK: - Subsystem & Category
 
     func testFormat_UsesTagSubsystemAndIdentifier() {
-        let tag = makeTag(
-            subsystem: "com.acme.app.network",
-            prefix: "NET",
-            name: "Network"
-        )
-        let message: LogMessage = "Hello"
-        let context = makeContext()
+        // GIVEN a LogTag with a specific subsystem and "NET Network" identifier
+        let tag = makeTag(subsystem: "com.acme.app.network", prefix: "NET", name: "Network")
 
-        let output = formatter.format(
-            level: LogLevel.info,
-            tag: tag,
-            message: message,
-            context: context
-        )
+        // WHEN  the formatter formats an entry with that tag
+        let output = formatter.format(level: .info, tag: tag, message: "Hello", context: makeContext())
 
+        // THEN  output.subsystem and output.category match the tag's values
         XCTAssertEqual(output.subsystem, "com.acme.app.network")
         XCTAssertEqual(output.category, "NET Network")
     }
 
     func testFormat_UsesTagIdentifierWithoutPrefix() {
-        let tag = makeTag(
-            subsystem: "com.acme.app",
-            prefix: "",
-            name: "General"
-        )
-        let message: LogMessage = "Hello"
-        let context = makeContext()
+        // GIVEN a LogTag with an empty prefix and name "General"
+        let tag = makeTag(subsystem: "com.acme.app", prefix: "", name: "General")
 
-        let output = formatter.format(
-            level: LogLevel.info,
-            tag: tag,
-            message: message,
-            context: context
-        )
+        // WHEN  the formatter formats an entry with that tag
+        let output = formatter.format(level: .info, tag: tag, message: "Hello", context: makeContext())
 
+        // THEN  output.category equals just the name "General"
         XCTAssertEqual(output.subsystem, "com.acme.app")
         XCTAssertEqual(output.category, "General")
     }
 
-    // MARK: - Text / Prefix Formatting
+    // MARK: - Message content
 
     func testFormat_TextContainsMessageValue() {
-        let tag = makeTag()
+        // GIVEN a message with interpolated content "Hello 42"
         let message: LogMessage = "Hello \(42)"
-        let context = makeContext()
 
-        let output = formatter.format(
-            level: LogLevel.info,
-            tag: tag,
-            message: message,
-            context: context
-        )
+        // WHEN  the formatter formats the entry
+        let output = formatter.format(level: .info, tag: makeTag(), message: message, context: makeContext())
 
+        // THEN  the formatted text contains the interpolated message value
         XCTAssertTrue(
             output.message.contains("Hello 42"),
             "Expected '\(output.message)' to contain interpolated message value"
@@ -94,22 +66,13 @@ final class OSLogFormatterTests: XCTestCase {
     }
 
     func testFormat_TextContainsLogLevelAndSourceLocation() {
-        let tag = makeTag()
-        let message: LogMessage = "Something happened"
-        let context = makeContext(
-            file: "FeatureFile.swift",
-            function: "doWork()",
-            line: 123
-        )
+        // GIVEN a context with file "FeatureFile.swift", function "doWork()", line 123
+        let context = makeContext(file: "FeatureFile.swift", function: "doWork()", line: 123)
 
-        let output = formatter.format(
-            level: LogLevel.warning,
-            tag: tag,
-            message: message,
-            context: context
-        )
+        // WHEN  the formatter formats a warning-level entry with that context
+        let output = formatter.format(level: .warning, tag: makeTag(), message: "Something happened", context: context)
 
-        // Prefix shape: [LEVEL] filename.function.line
+        // THEN  the formatted text contains the "[WARNING]" prefix and the source location
         XCTAssertTrue(
             output.message.contains("[WARNING]"),
             "Expected log text to contain level prefix '[WARNING]' but was: \(output.message)"
@@ -121,18 +84,16 @@ final class OSLogFormatterTests: XCTestCase {
     }
 
     func testFormat_PrefixAndMessageSeparatedByColon() {
-        let tag = makeTag()
-        let message: LogMessage = "Payload"
-        let context = makeContext()
-
+        // GIVEN a message "Payload" and a standard context
+        // WHEN  the formatter formats a debug-level entry
         let output = formatter.format(
-            level: LogLevel.debug,
-            tag: tag,
-            message: message,
-            context: context
+            level: .debug,
+            tag: makeTag(),
+            message: "Payload",
+            context: makeContext()
         )
 
-        // we expect something like: "[DEBUG] MyFile.swift.myFunction().42: Payload"
+        // THEN  the formatted text contains ": Payload", separating the prefix from the message
         XCTAssertTrue(
             output.message.contains(": Payload"),
             "Expected log text to contain ': Payload' but was: \(output.message)"

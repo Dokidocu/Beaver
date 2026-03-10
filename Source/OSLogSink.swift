@@ -43,7 +43,7 @@ public struct OSLogSink: LogSink {
         context: LogContext
     ) {
         let output = formatter.format(level: logLevel, tag: logTag, message: message, context: context)
-        let logger = LoggerCache.logger(subsystem: output.subsystem, category: output.category)
+        let logger = LoggerCache.shared.logger(subsystem: output.subsystem, category: output.category)
 
         switch logLevel {
         case .debug:
@@ -64,18 +64,24 @@ public struct OSLogSink: LogSink {
 ///
 /// `os.Logger` should be created once per subsystem/category pair and reused.
 /// This cache avoids repeated allocations on hot logging paths.
-private enum LoggerCache {
-    private static let lock = NSLock()
-    private static var cache: [String: Logger] = [:]
+///
+/// `@unchecked Sendable` is safe here: all access to `cache` is serialised through `lock`.
+private final class LoggerCache: @unchecked Sendable {
+    static let shared = LoggerCache()
 
-    static func logger(subsystem: String, category: String) -> Logger {
+    private var cache: [String: Logger] = [:]
+    private let lock = NSLock()
+
+    private init() {}
+
+    func logger(subsystem: String, category: String) -> Logger {
         let key = "\(subsystem)/\(category)"
-        lock.lock()
-        defer { lock.unlock() }
-        if let cached = cache[key] { return cached }
-        let logger = Logger(subsystem: subsystem, category: category)
-        cache[key] = logger
-        return logger
+        return lock.withLock {
+            if let cached = cache[key] { return cached }
+            let logger = Logger(subsystem: subsystem, category: category)
+            cache[key] = logger
+            return logger
+        }
     }
 }
 
