@@ -3,7 +3,7 @@ import OSLog
 @testable import Beaver
 
 final class OSLogFormatterTests: XCTestCase {
-    private let formatter = OSLogFormatter()
+    private let formatter = OSLogFormatter(sourceFormat: .compact)
 
     // MARK: - Helpers
 
@@ -57,11 +57,12 @@ final class OSLogFormatterTests: XCTestCase {
 
         // WHEN  the formatter formats the entry
         let output = formatter.format(level: .info, tag: makeTag(), message: message, context: makeContext())
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
 
         // THEN  the formatted text contains the interpolated message value
         XCTAssertTrue(
-            output.message.contains("Hello 42"),
-            "Expected '\(output.message)' to contain interpolated message value"
+            rendered.contains("Hello 42"),
+            "Expected '\(rendered)' to contain interpolated message value"
         )
     }
 
@@ -71,15 +72,16 @@ final class OSLogFormatterTests: XCTestCase {
 
         // WHEN  the formatter formats a warning-level entry with that context
         let output = formatter.format(level: .warning, tag: makeTag(), message: "Something happened", context: context)
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
 
         // THEN  the formatted text contains the "[WARNING]" prefix and the source location
         XCTAssertTrue(
-            output.message.contains("[WARNING]"),
-            "Expected log text to contain level prefix '[WARNING]' but was: \(output.message)"
+            rendered.contains("[WARNING]"),
+            "Expected log text to contain level prefix '[WARNING]' but was: \(rendered)"
         )
         XCTAssertTrue(
-            output.message.contains("FeatureFile.swift.doWork().123"),
-            "Expected log text to contain source location, but was: \(output.message)"
+            rendered.contains("FeatureFile.swift:123"),
+            "Expected log text to contain source location, but was: \(rendered)"
         )
     }
 
@@ -92,11 +94,97 @@ final class OSLogFormatterTests: XCTestCase {
             message: "Payload",
             context: makeContext()
         )
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
 
         // THEN  the formatted text contains ": Payload", separating the prefix from the message
         XCTAssertTrue(
-            output.message.contains(": Payload"),
-            "Expected log text to contain ': Payload' but was: \(output.message)"
+            rendered.contains(": Payload"),
+            "Expected log text to contain ': Payload' but was: \(rendered)"
         )
+    }
+
+    func testFormat_TextContainsTagAfterLevel() {
+        // GIVEN a formatter and a tag named "Network"
+        let tag = makeTag(name: "Network")
+
+        // WHEN  the formatter formats an entry
+        let output = formatter.format(level: .info, tag: tag, message: "Hello", context: makeContext())
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
+
+        // THEN  the formatted text includes the tag after the level
+        XCTAssertTrue(
+            rendered.contains("[INFO] [Network]"),
+            "Expected log text to contain level and tag, but was: \(rendered)"
+        )
+    }
+
+    func testFormat_FullSourceFormatIncludesFileFunctionAndLine() {
+        // GIVEN a formatter configured with full source output
+        let formatter = OSLogFormatter(sourceFormat: .full)
+        let context = makeContext(file: "FeatureFile.swift", function: "doWork()", line: 123)
+
+        // WHEN  the formatter formats an entry
+        let output = formatter.format(level: .debug, tag: makeTag(), message: "Payload", context: context)
+
+        // THEN  the message includes file, function, and line
+        XCTAssertTrue(output.redactedMessage(defaultPrivacy: .public).contains("FeatureFile.swift.doWork().123"))
+    }
+
+    func testFormat_CompactSourceFormatIncludesFileAndLineOnly() {
+        // GIVEN a formatter configured with compact source output
+        let formatter = OSLogFormatter(sourceFormat: .compact)
+        let context = makeContext(file: "FeatureFile.swift", function: "doWork()", line: 123)
+
+        // WHEN  the formatter formats an entry
+        let output = formatter.format(level: .debug, tag: makeTag(), message: "Payload", context: context)
+
+        // THEN  the message includes file and line without the function
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
+        XCTAssertTrue(rendered.contains("FeatureFile.swift:123"))
+        XCTAssertFalse(rendered.contains("doWork()"))
+    }
+
+    func testFormat_NoSourceFormatOmitsSourceLocation() {
+        // GIVEN a formatter configured with no source output
+        let formatter = OSLogFormatter(sourceFormat: .none)
+        let context = makeContext(file: "FeatureFile.swift", function: "doWork()", line: 123)
+
+        // WHEN  the formatter formats an entry
+        let output = formatter.format(level: .error, tag: makeTag(), message: "Payload", context: context)
+
+        // THEN  the output contains only the level, tag, and message
+        XCTAssertEqual(output.redactedMessage(defaultPrivacy: .public), "[ERROR] [Network] Payload")
+    }
+
+    func testFormat_RedactsOnlyInheritedInterpolationsWhenDefaultPrivacyIsPrivate() {
+        // GIVEN a message with one literal prefix and one inherited interpolation
+        let output = formatter.format(
+            level: .info,
+            tag: makeTag(),
+            message: "Signed in user \("alice@example.com")",
+            context: makeContext()
+        )
+
+        // WHEN  the default privacy is private
+        let rendered = output.redactedMessage(defaultPrivacy: .private)
+
+        // THEN  the literal text remains visible while the interpolated value is redacted
+        XCTAssertEqual(rendered, "[INFO] [Network] MyFile.swift:42: Signed in user <private>")
+    }
+
+    func testFormat_RespectsExplicitPrivateAndPublicInterpolations() {
+        // GIVEN a message with both explicit public and explicit private interpolation
+        let output = formatter.format(
+            level: .info,
+            tag: makeTag(),
+            message: "Build \(public: "Debug") for \("user") \(private: "alice@example.com")",
+            context: makeContext()
+        )
+
+        // WHEN  the default privacy is public
+        let rendered = output.redactedMessage(defaultPrivacy: .public)
+
+        // THEN  explicit private values are redacted while explicit public values remain visible
+        XCTAssertEqual(rendered, "[INFO] [Network] MyFile.swift:42: Build Debug for user <private>")
     }
 }

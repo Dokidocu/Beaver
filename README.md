@@ -103,6 +103,39 @@ final class HomeViewModel: ObservableObject {
 | `.warning` | `fault` | Unexpected but recoverable situations |
 | `.error` | `error` | Failures that affect functionality |
 
+## Default Output
+
+The built-in `OSLogSink` formats messages as:
+
+```text
+[LEVEL] [TAG] File.swift:42: message
+```
+
+You can configure the source section with:
+
+- `.full` for `File.swift.function().42`
+- `.compact` for `File.swift:42` (default)
+- `.none` to omit source output
+
+`OSLogSink` uses `.private` as the default privacy for unannotated interpolated values:
+
+```swift
+OSLogSink()                 // default: privacy = .private
+OSLogSink(privacy: .public) // default unannotated interpolations to public
+```
+
+Explicit interpolation privacy overrides the sink default:
+
+```swift
+Log.info("Signed in user \(private: email)", tag: LogTags.auth)
+Log.info("Build \(public: buildFlavor)", tag: LogTags.general)
+```
+
+This renders literals, tags, and source location normally while redacting only the
+private interpolated values as `<private>`. Beaver still does not make secrets safe by
+magic, so avoid logging highly sensitive values unless you have intentionally decided
+to do so.
+
 ## Log Tags
 
 Tags identify the feature area that emitted a log. They map to the `subsystem` and `category` fields of `os.Logger`, making logs easily filterable in Console.app and Instruments.
@@ -137,7 +170,17 @@ Log.info("Payment authorised", tag: LogTags.payments)
 
 ## Message Interpolation
 
-`LogMessage` uses `ExpressibleByStringInterpolation` so messages are constructed lazily — if the log level is filtered out, the string is never built.
+`LogMessage` uses `ExpressibleByStringInterpolation` to provide convenient inline formatting for common value types such as doubles, arrays, dictionaries, optionals, and JSON payloads. Plain dictionary interpolation is rendered deterministically by sorting entries lexicographically by displayed key text.
+
+When you need OSLog-aware redaction, annotate individual interpolations:
+
+```swift
+Log.info("Signed in user \(private: email)", tag: LogTags.auth)
+Log.debug("Payload:\n\(privateJSON: payload)", tag: LogTags.api)
+Log.info("Build \(public: buildFlavor)", tag: LogTags.general)
+```
+
+Beaver's logging APIs accept messages as `@autoclosure`, so message expressions are evaluated only after the minimum-level check passes.
 
 ```swift
 let value = 3.14159
@@ -147,7 +190,7 @@ Log.debug("Pi ≈ \(value, precision: 4)")           // "Pi ≈ 3.1416"
 let ids = [1, 2, 3]
 Log.debug("IDs: \(ids)")                           // "IDs: [1, 2, 3]"
 
-let meta: [String: Any] = ["attempt": 1, "timeout": 30]
+let meta: [String: Any] = ["timeout": 30, "attempt": 1]
 Log.debug("Meta: \(meta)")                         // "Meta: {attempt: 1, timeout: 30}"
 
 struct Response: Codable { let status: Int; let body: String }
@@ -219,7 +262,7 @@ Log (actor)
 ```
 
 - **`Log`** — actor; holds `LoggerState` as a `nonisolated let`; all log methods are `nonisolated` so they never suspend.
-- **`LoggerState`** — `@unchecked Sendable` class; guards the active `LoggerFacade` with an `NSLock`; enables lock-free reads after a single load.
+- **`LoggerState`** — `@unchecked Sendable` class; guards the active `LoggerFacade` with an `NSLock` and performs a single short lock-protected facade load per log call.
 - **`LoggerFacade`** — immutable filter; drops messages below the configured minimum level.
 - **`LogSinks`** — fans a message out to all configured sinks.
 - **`OSLogSink`** — bridges to `os.Logger`; caches `Logger` instances per subsystem/category.

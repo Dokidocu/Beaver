@@ -91,7 +91,7 @@ await Log.configure(.init(minimumLevel: level, sinks: [OSLogSink()]))
 Log.debug("Cache miss for key '\(key)'")
 Log.info("User authenticated", tag: LogTags.auth)
 Log.warning("Response time exceeded threshold", tag: LogTags.performance)
-Log.error("Payment failed: \(error)", tag: LogTags.payments)
+Log.error("Request failed: \(error)", tag: LogTags.api)
 ```
 
 The `tag` parameter defaults to `LogTags.general` when omitted.
@@ -123,6 +123,40 @@ actor DataStore {
     }
 }
 ```
+
+---
+
+## Default Output
+
+The built-in `OSLogSink` formats messages as:
+
+```text
+[LEVEL] [TAG] File.swift:42: message
+```
+
+You can configure the source section with:
+
+- `.full` for `File.swift.function().42`
+- `.compact` for `File.swift:42` (default)
+- `.none` to omit source output
+
+`OSLogSink` uses `.private` as the default privacy for unannotated interpolated values:
+
+```swift
+OSLogSink()                 // default: privacy = .private
+OSLogSink(privacy: .public) // default unannotated interpolations to public
+```
+
+Explicit interpolation privacy overrides the sink default:
+
+```swift
+Log.info("Signed in user \(private: email)", tag: LogTags.auth)
+Log.info("Build \(public: buildFlavor)", tag: LogTags.general)
+```
+
+This keeps literal text visible while redacting only private interpolated values as
+`<private>`. Do not rely on logging as a safe place for secrets, tokens, or personally
+identifiable information unless you have intentionally chosen to expose them.
 
 ---
 
@@ -170,7 +204,17 @@ Log.info("Payment authorised — order: \(orderId)", tag: LogTags.payments)
 
 ## Message Interpolation
 
-`LogMessage` uses `ExpressibleByStringInterpolation` for lazy, zero-overhead formatting. Messages are constructed only if they pass the minimum level filter.
+`LogMessage` uses `ExpressibleByStringInterpolation` to provide convenient inline formatting for common value types such as doubles, arrays, dictionaries, optionals, and JSON payloads. Plain dictionary interpolation is rendered deterministically by sorting entries lexicographically by displayed key text.
+
+When you want field-level privacy in `OSLogSink`, annotate the interpolation itself:
+
+```swift
+Log.info("Signed in user \(private: email)", tag: LogTags.auth)
+Log.debug("Payload:\n\(privateJSON: payload)", tag: LogTags.api)
+Log.info("Build \(public: buildFlavor)", tag: LogTags.general)
+```
+
+Beaver's logging APIs accept messages as `@autoclosure`, so message expressions are evaluated only after the minimum-level check passes.
 
 ```swift
 // Double with precision
@@ -181,8 +225,8 @@ let ids = [1, 2, 3]
 Log.debug("Processing IDs: \(ids)")          // "Processing IDs: [1, 2, 3]"
 
 // Dictionary
-let meta: [String: Any] = ["attempt": 1]
-Log.debug("Meta: \(meta)")                   // "Meta: {attempt: 1}"
+let meta: [String: Any] = ["timeout": 30, "attempt": 1]
+Log.debug("Meta: \(meta)")                   // "Meta: {attempt: 1, timeout: 30}"
 
 // Optional
 let userId: String? = nil
@@ -214,7 +258,7 @@ struct PrintSink: LogSink {
         context: LogContext
     ) {
         let file = String(describing: context.file).split(separator: "/").last.map(String.init) ?? "?"
-        print("[\(logLevel.rawValue.uppercased())] [\(logTag.identifier)] \(file):\(context.line) — \(message.value)")
+        print("[\(logLevel.name)] [\(logTag.identifier)] \(file):\(context.line) — \(message.value)")
     }
 }
 ```
@@ -234,7 +278,7 @@ final class RemoteLogSink: LogSink, @unchecked Sendable {
         context: LogContext
     ) {
         let text = message.value        // capture before async hop
-        let level = logLevel.rawValue
+        let level = logLevel.name
         queue.async { self.send(text, level: level) }
     }
 

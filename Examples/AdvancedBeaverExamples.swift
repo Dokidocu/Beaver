@@ -176,7 +176,7 @@ final class StructuredJSONSink: LogSink, @unchecked Sendable {
         let file = String(describing: context.file).split(separator: "/").last.map(String.init) ?? ""
         let event = LogEvent(
             timestamp: formatter.string(from: Date()),
-            level: logLevel.rawValue,
+            level: logLevel.name,
             subsystem: logTag.subsystem,
             category: String(describing: logTag.name),
             file: file,

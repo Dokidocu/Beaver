@@ -4,6 +4,7 @@
 // All examples compile against the actual Beaver API.
 
 import Beaver
+import Combine
 import Foundation
 
 // ─── 1. App startup ──────────────────────────────────────────────────────────
@@ -97,8 +98,8 @@ func paymentFlow(orderId: String, amount: Double) {
 
 // ─── 6. Message interpolation ─────────────────────────────────────────────────
 //
-// LogMessage supports rich interpolation. Messages are built lazily — if the
-// level is filtered, the string is never constructed.
+// LogMessage supports rich interpolation helpers for common value types, and
+// Beaver evaluates log-message expressions only after level filtering passes.
 
 struct RequestMetrics: Codable {
     let endpoint: String
@@ -138,7 +139,7 @@ struct PrintSink: LogSink {
         context: LogContext
     ) {
         let file = String(describing: context.file).split(separator: "/").last.map(String.init) ?? "?"
-        print("[\(logLevel.rawValue.uppercased())] [\(logTag.identifier)] \(file):\(context.line) — \(message.value)")
+        print("[\(logLevel.name)] [\(logTag.identifier)] \(file):\(context.line) — \(message.value)")
     }
 }
 
@@ -163,7 +164,7 @@ final class RemoteLogSink: LogSink, @unchecked Sendable {
         context: LogContext
     ) {
         let text = message.value        // capture before async hop
-        let level = logLevel.rawValue
+        let level = logLevel.name
         queue.async { self.send(text, level: level) }
     }
 

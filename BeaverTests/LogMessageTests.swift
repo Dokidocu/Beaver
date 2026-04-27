@@ -23,6 +23,26 @@ final class LogMessageTests: XCTestCase {
         XCTAssertEqual(message.value, "Hello World")
     }
 
+    func testStringInterpolationWithExplicitPrivateValueStillPreservesPlainValue() {
+        // GIVEN a String variable interpolated with explicit private privacy
+        let email = "alice@example.com"
+
+        // WHEN  value is read
+        // THEN  the plain message still contains the original rendered text
+        let message: LogMessage = "Signed in user \(private: email)"
+        XCTAssertEqual(message.value, "Signed in user alice@example.com")
+    }
+
+    func testStringInterpolationWithExplicitPublicValueStillPreservesPlainValue() {
+        // GIVEN a String variable interpolated with explicit public privacy
+        let build = "Debug"
+
+        // WHEN  value is read
+        // THEN  the plain message still contains the original rendered text
+        let message: LogMessage = "Build \(public: build)"
+        XCTAssertEqual(message.value, "Build Debug")
+    }
+
     // MARK: - Int
 
     func testStringInterpolationWithInt() {
@@ -83,15 +103,26 @@ final class LogMessageTests: XCTestCase {
 
     func testDictionaryInterpolation() {
         // GIVEN a [String: Int] dictionary interpolated into a LogMessage
-        let dict = ["a": 1, "b": 2]
+        let dict = ["b": 2, "a": 1]
 
         // WHEN  value is read
-        // THEN  entries are rendered in {key: value} format (order is not guaranteed)
+        // THEN  entries are rendered in {key: value} format with keys sorted by displayed text
         let message: LogMessage = "Dict: \(dict)"
-        XCTAssertTrue(message.value.hasPrefix("Dict: {"))
-        XCTAssertTrue(message.value.hasSuffix("}"))
-        XCTAssertTrue(message.value.contains("a: 1"))
-        XCTAssertTrue(message.value.contains("b: 2"))
+        XCTAssertEqual(message.value, "Dict: {a: 1, b: 2}")
+    }
+
+    func testDictionaryInterpolationUsesRenderedPairAsTieBreaker() {
+        // GIVEN two distinct keys that render to the same displayed text
+        struct AliasKey: Hashable, CustomStringConvertible {
+            let id: Int
+            var description: String { "dup" }
+        }
+        let dict = [AliasKey(id: 2): 2, AliasKey(id: 1): 1]
+
+        // WHEN  value is read
+        // THEN  entries remain deterministic by falling back to the rendered pair text
+        let message: LogMessage = "Dict: \(dict)"
+        XCTAssertEqual(message.value, "Dict: {dup: 1, dup: 2}")
     }
 
     // MARK: - Optional interpolation
@@ -138,6 +169,18 @@ final class LogMessageTests: XCTestCase {
         // THEN  the string "nil" is rendered
         let message: LogMessage = "JSON optional:\n\(json: dict)"
         XCTAssertEqual(message.value, "JSON optional:\nnil")
+    }
+
+    func testPrivateJSONDictionaryInterpolationPreservesRenderedValue() throws {
+        // GIVEN a [String: Any] dictionary interpolated with the privateJSON: label
+        let dict: [String: Any] = ["b": 2, "a": 1]
+
+        // WHEN  value is read
+        // THEN  it still contains the same rendered JSON text
+        let message: LogMessage = "JSON:\n\(privateJSON: dict)"
+        let data = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])
+        let expectedJSON = String(data: data, encoding: .utf8)!
+        XCTAssertEqual(message.value, "JSON:\n" + expectedJSON)
     }
 
     // MARK: - Codable JSON interpolation

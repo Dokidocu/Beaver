@@ -7,6 +7,16 @@ final class LoggerFacade: LogSink, Sendable {
         self.minimumLevel = minimumLevel
     }
 
+    func writeLog(
+        logLevel: LogLevel,
+        logTag: LogTag,
+        message: () -> LogMessage,
+        context: LogContext
+    ) {
+        guard logLevel >= minimumLevel else { return }
+        sink.writeLog(logLevel: logLevel, logTag: logTag, message: message(), context: context)
+    }
+
     func writeLog(logLevel: LogLevel, logTag: LogTag, message: LogMessage, context: LogContext) {
         guard logLevel >= minimumLevel else { return }
         sink.writeLog(logLevel: logLevel, logTag: logTag, message: message, context: context)

@@ -6,6 +6,7 @@ import Beaver
 /// The compile-time tests here confirm that:
 /// - `LogSink` can be conformed to from outside the module (see `PublicSink.swift`)
 /// - `OSLogSink` is publicly accessible and conforms to `LogSink`
+/// - `OSLogPrivacyMode` is publicly accessible for configuring sink-level privacy
 /// - The `writeLog` method signature (parameters, types) has not changed
 final class LogSinkPublicAPITests: XCTestCase {
     // MARK: - Compile-time conformance checks
@@ -32,6 +33,36 @@ final class LogSinkPublicAPITests: XCTestCase {
         // WHEN  OSLogSink() is called
         // THEN  it compiles, confirming the public no-argument initialiser exists
         _ = OSLogSink()
+    }
+
+    func testOSLogSourceFormatIsPubliclyAccessible() {
+        // WHEN  LogSourceFormat is referenced
+        // THEN  it compiles, confirming the enum is public
+        let _: LogSourceFormat = .compact
+    }
+
+    func testOSLogPrivacyModeIsPubliclyAccessible() {
+        // WHEN  OSLogPrivacyMode is referenced
+        // THEN  it compiles, confirming the enum is public
+        let _: OSLogPrivacyMode = .private
+    }
+
+    func testOSLogSinkCanBeInitialisedWithSourceFormat() {
+        // WHEN  OSLogSink(sourceFormat:) is called
+        // THEN  it compiles, confirming the public configurable initialiser exists
+        _ = OSLogSink(sourceFormat: .none)
+    }
+
+    func testOSLogSinkCanBeInitialisedWithPrivacyMode() {
+        // WHEN  OSLogSink(privacy:) is called
+        // THEN  it compiles, confirming sink-level privacy is configurable
+        _ = OSLogSink(privacy: .public)
+    }
+
+    func testOSLogSinkCanBeInitialisedWithSourceFormatAndPrivacyMode() {
+        // WHEN  OSLogSink(sourceFormat:privacy:) is called
+        // THEN  it compiles, confirming both options can be configured together
+        _ = OSLogSink(sourceFormat: .full, privacy: .public)
     }
 
     // MARK: - Sink receives correct data

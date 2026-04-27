@@ -19,7 +19,7 @@ final class LoggerState: @unchecked Sendable {
     func writeLog(
         logLevel: LogLevel,
         logTag: LogTag,
-        message: LogMessage,
+        message: () -> LogMessage,
         context: LogContext
     ) {
         let current = lock.withLock { facade }

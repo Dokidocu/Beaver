@@ -70,17 +70,36 @@ public actor Log {
     /// - Parameters:
     ///   - level: The severity of the log message.
     ///   - tag: The tag identifying the logical source or category of the log entry.
-    ///   - message: The log message to emit.
+    ///   - message: The log message to emit. It is evaluated only if the message
+    ///     passes the configured minimum-level filter.
     ///   - file: The source file. Defaults to the caller's file via `#fileID`.
     ///   - function: The function. Defaults to the caller's function via `#function`.
     ///   - line: The line number. Defaults to the caller's line via `#line`.
     public nonisolated func log(
         _ level: LogLevel,
         tag: LogTag,
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
+    ) {
+        writeLog(
+            level,
+            tag: tag,
+            message: message,
+            file: file,
+            function: function,
+            line: line
+        )
+    }
+
+    private nonisolated func writeLog(
+        _ level: LogLevel,
+        tag: LogTag,
+        message: () -> LogMessage,
+        file: StaticString,
+        function: StaticString,
+        line: UInt
     ) {
         _state.writeLog(
             logLevel: level,
@@ -94,92 +113,92 @@ public actor Log {
 
     /// Logs a debug-level message.
     public nonisolated func debug(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        log(.debug, tag: tag, message, file: file, function: function, line: line)
+        writeLog(.debug, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs an info-level message.
     public nonisolated func info(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        log(.info, tag: tag, message, file: file, function: function, line: line)
+        writeLog(.info, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs a warning-level message.
     public nonisolated func warning(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        log(.warning, tag: tag, message, file: file, function: function, line: line)
+        writeLog(.warning, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs an error-level message.
     public nonisolated func error(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        log(.error, tag: tag, message, file: file, function: function, line: line)
+        writeLog(.error, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     // MARK: - Static convenience methods
 
     /// Logs a debug-level message via the shared logger.
     public static func debug(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        shared.debug(message, tag: tag, file: file, function: function, line: line)
+        shared.writeLog(.debug, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs an info-level message via the shared logger.
     public static func info(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        shared.info(message, tag: tag, file: file, function: function, line: line)
+        shared.writeLog(.info, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs a warning-level message via the shared logger.
     public static func warning(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        shared.warning(message, tag: tag, file: file, function: function, line: line)
+        shared.writeLog(.warning, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     /// Logs an error-level message via the shared logger.
     public static func error(
-        _ message: LogMessage,
+        _ message: @autoclosure () -> LogMessage,
         tag: LogTag = LogTags.general,
         file: StaticString = #fileID,
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        shared.error(message, tag: tag, file: file, function: function, line: line)
+        shared.writeLog(.error, tag: tag, message: message, file: file, function: function, line: line)
     }
 
     // MARK: - Configuration
